@@ -7,6 +7,7 @@
 #include "platform.h"
 
 #include "util.h"
+#include "net.h"
 
 struct irq_entry
 {
@@ -65,8 +66,7 @@ int intr_raise_irq(unsigned int irq)
     return pthread_kill(tid, (int)irq);
 }
 
-static void *
-intr_thread(void *arg)
+static void *intr_thread(void *arg)
 {
     int terminate = 0, sig, err;
     struct irq_entry *entry;
@@ -85,6 +85,9 @@ intr_thread(void *arg)
         {
         case SIGHUP:
             terminate = 1;
+            break;
+        case SIGUSR1:
+            net_softirq_handler();
             break;
         default:
             for (entry = irqs; entry; entry = entry->next)
@@ -138,5 +141,6 @@ int intr_init(void)
     pthread_barrier_init(&barrier, NULL, 2);
     sigemptyset(&sigmask);
     sigaddset(&sigmask, SIGHUP);
+    sigaddset(&sigmask, SIGUSR1);
     return 0;
 }
