@@ -99,11 +99,11 @@ static void icmp_input(const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t
 
     hdr = (struct icmp_hdr *)data;
 
-    if (cksum16((uint16_t *)hdr, len, 0) != 0)
-    {
-        errorf("checksum error, sum=0x%04x, verify=0x%04x", ntoh16(hdr->sum), ntoh16(cksum16((uint16_t *)data, len, -hdr->sum)));
-        return;
-    }
+    // if (cksum16((uint16_t *)hdr, len, 0) != 0)
+    // {
+    //     errorf("checksum error, sum=0x%04x, verify=0x%04x", ntoh16(hdr->sum), ntoh16(cksum16((uint16_t *)data, len, -hdr->sum)));
+    //     return;
+    // }
 
     debugf("%s -> %s, len=%zu", ip_addr_ntop(src, addr1, sizeof(addr1)), ip_addr_ntop(dst, addr2, sizeof(addr2)), len);
     icmp_dump(data, len);
