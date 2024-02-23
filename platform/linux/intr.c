@@ -21,9 +21,9 @@ struct irq_entry
     void *dev;
 };
 
+
 /* NOTE: if you want to add/delete the entries after intr_run(), you need to protect these lists with a mutex. */
 static struct irq_entry *irqs;
-
 static sigset_t sigmask;
 
 static pthread_t tid;
@@ -86,40 +86,36 @@ intr_timer_setup(struct itimerspec *interval)
     return 0;
 }
 
-static void *intr_thread(void *arg)
+static void *
+intr_thread(void *arg)
 {
-    const struct timespec ts = {0, 1000000}; /* 1ms */
+    struct timespec ts = {0, 1000000}; // 1ms
     struct itimerspec interval = {ts, ts};
-
-    int terminate = 0, sig, err;
+    int sig, err;
     struct irq_entry *entry;
 
-    debugf("start...");
-    pthread_barrier_wait(&barrier);
     if (intr_timer_setup(&interval) == -1)
     {
-        errorf("intr_timer_setup() failure");
         return NULL;
     }
-
-    while (!terminate)
+    while (1)
     {
         err = sigwait(&sigmask, &sig);
         if (err)
         {
-            errorf("sigwait () &s", strerror(err));
+            errorf("sigwait() %s", strerror(err));
             break;
         }
         switch (sig)
         {
-        case SIGHUP:
-            terminate = 1;
+        case SIGUSR1:
+            net_softirq_handler();
+            break;
+        case SIGUSR2:
+            net_event_handler();
             break;
         case SIGALRM:
             net_timer_handler();
-            break;
-        case SIGUSR1:
-            net_softirq_handler();
             break;
         default:
             for (entry = irqs; entry; entry = entry->next)
@@ -133,7 +129,6 @@ static void *intr_thread(void *arg)
             break;
         }
     }
-    debugf("terminated");
     return NULL;
 }
 
@@ -174,5 +169,6 @@ int intr_init(void)
     sigemptyset(&sigmask);
     sigaddset(&sigmask, SIGHUP);
     sigaddset(&sigmask, SIGUSR1);
+    sigaddset(&sigmask, SIGUSR2);
     return 0;
 }
